@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragotron Supreme Battle</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+            font-family: 'Poppins', sans-serif;
+            height: 100vh;
+            color: white;
+            position: relative;
+        }
+
+        #dragotron,
+        #boss {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            cursor: pointer;
+            transition: transform 0.1s ease-out;
+        }
+
+        #speech-bubble {
+            position: absolute;
+            background: white;
+            color: black;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            pointer-events: none;
+        }
+
+        #fire {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle at center, #00f, #00f0);
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            animation: fireblast 0.5s forwards;
+        }
+
+        @keyframes fireblast {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+
+        .wing {
+            transform-origin: top center;
+            animation: flap 0.8s infinite alternate;
+        }
+
+        @keyframes flap {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(15deg);
+            }
+        }
+
+        .eye {
+            transform-origin: center;
+            animation: blink 5s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            90%,
+            100% {
+                transform: scaleY(1);
+            }
+
+            95% {
+                transform: scaleY(0.1);
+            }
+        }
+
+        #hp-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            height: 20px;
+            background: #444;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #hp-fill {
+            height: 100%;
+            background: green;
+            width: 100%;
+        }
+
+        #level {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+        }
+
+        #score {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            font-size: 1.2rem;
+        }
+
+        #mini-map {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+        }
+
+        #map-dragon,
+        #map-boss {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: white;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+
+    <audio id="background-music"
+        src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_8e7e1d1f4f.mp3?filename=epic-adventure-113064.mp3"
+        autoplay loop></audio>
+    <audio id="woosh-sound"
+        src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_22ffb06a4a.mp3?filename=fast-swoosh-1-6743.mp3"></audio>
+    <audio id="hit-sound"
+        src="https://cdn.pixabay.com/download/audio/2021/09/27/audio_72958b1b7c.mp3?filename=cartoon-hit-3-8553.mp3"></audio>
+
+    <!-- Dragotron -->
+    <svg id="dragotron" viewBox="0 0 200 200">
+        <circle id="body" cx="100" cy="100" r="50" fill="silver" stroke="black" stroke-width="2" />
+        <circle class="eye" cx="85" cy="85" r="5" fill="deepskyblue" />
+        <circle class="eye" cx="115" cy="85" r="5" fill="deepskyblue" />
+        <polygon class="wing" points="40,80 20,40 60,50" fill="lightblue" stroke="black" stroke-width="2" />
+        <polygon class="wing" points="160,80 180,40 140,50" fill="lightblue" stroke="black" stroke-width="2" />
+        <path d="M 100 150 Q 90 170 110 190" stroke="gray" stroke-width="5" fill="none" />
+    </svg>
+
+    <!-- Boss -->
+    <svg id="boss" viewBox="0 0 200 200" style="display: none;">
+        <circle cx="100" cy="100" r="50" fill="darkred" stroke="black" stroke-width="3" />
+        <rect x="80" y="70" width="10" height="20" fill="black" />
+        <rect x="110" y="70" width="10" height="20" fill="black" />
+        <path d="M 80 130 Q 100 160 120 130" stroke="black" stroke-width="5" fill="none" />
+    </svg>
+
+    <div id="hp-bar">
+        <div id="hp-fill"></div>
+    </div>
+    <div id="level">Level: 1</div>
+    <div id="score">Score: 0</div>
+    <div id="mini-map">
+        <div id="map-dragon" style="top: 50%; left: 50%;"></div>
+        <div id="map-boss" style="top: 20%; left: 20%;"></div>
+    </div>
+    <div id="fire"></div>
+    <div id="speech-bubble">Halo! Aku Dragotron Supreme! 🐲🔥</div>
+
+    <script>
+        const dragotron = document.getElementById('dragotron');
+        const body = document.getElementById('body');
+        const speech = document.getElementById('speech-bubble');
+        const fire = document.getElementById('fire');
+        const woosh = document.getElementById('woosh-sound');
+        const hit = document.getElementById('hit-sound');
+        const music = document.getElementById('background-music');
+
+        let posX = window.innerWidth / 2;
+        let posY = window.innerHeight / 2;
+        let targetX = posX;
+        let targetY = posY;
+        let speed = 2;
+        let powerCount = 0;
+        let bossActive = false;
+        let hp = 100;
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+
+        // Auto-movement
+        function moveDragotron() {
+            const dx = Math.sin(Date.now() / 1000) * 50;
+            const dy = Math.cos(Date.now() / 1000) * 50;
+
+            posX += dx * 0.1;
+            posY += dy * 0.1;
+
+            if (posX < 0) posX = 0;
+            if (posY < 0) posY = 0;
+            if (posX > window.innerWidth - 150) posX = window.innerWidth - 150;
+            if (posY > window.innerHeight - 150) posY = window.innerHeight - 150;
+
+            dragotron.style.left = posX + 'px';
+            dragotron.style.top = posY + 'px';
+
+            updateMiniMap();
+            requestAnimationFrame(moveDragotron);
+        }
+
+        // Mini Map
+        function updateMiniMap() {
+            document.getElementById('map-dragon').style.top = `${(posY / window.innerHeight) * 100}%`;
+            document.getElementById('map-dragon').style.left = `${(posX / window.innerWidth) * 100}%`;
+        }
+
+        // Power Up
+        function powerUp() {
+            if (powerCount > 0) return;
+            powerCount++;
+            speech.textContent = `Power-up activated! Fire ready!`;
+            speech.style.opacity = 1;
+            setTimeout(() => speech.style.opacity = 0, 2000);
+        }
+
+        // Boss Fight Logic
+        function bossFight() {
+            if (!bossActive) return;
+            const bossX = parseFloat(boss.style.left);
+            const bossY = parseFloat(boss.style.top);
+            const distance = Math.sqrt(Math.pow(posX - bossX, 2) + Math.pow(posY - bossY, 2));
+
+            if (distance < 100) {
+                boss.style.display = 'none';
+                bossActive = false;
+                score += 50;
+                level++;
+                document.getElementById('score').textContent = 'Score: ' + score;
+                document.getElementById('level').textContent = 'Level: ' + level;
+                setTimeout(() => {
+                    boss.style.display = 'block';
+                    boss.style.top = Math.random() * (window.innerHeight - 150) + 'px';
+                    boss.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+                    bossActive = true;
+                }, 2000);
+            }
+        }
+
+        // HP Update
+        function updateHP() {
+            const hpFill = document.getElementById('hp-fill');
+            hpFill.style.width = hp + '%';
+            if (hp <= 0) {
+                speech.textContent = 'Game Over! 😔';
+                speech.style.opacity = 1;
+                setTimeout(() => location.reload(), 3000);
+            }
+        }
+
+        // Game Loop
+        function gameLoop() {
+            bossFight();
+            updateHP();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start Boss Battle
+        setInterval(() => {
+            bossActive = true;
+            boss.style.top = Math.random() * (window.innerHeight - 150) + 'px';
+            boss.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+        }, 1000);
+
+        // Start Game
+        moveDragotron();
+        gameLoop();
+    </script>
+
+</body>
+
+</html>
