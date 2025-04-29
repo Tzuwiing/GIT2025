@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dragotron Supreme Battle</title>
     <style>
         body {
@@ -13,8 +13,8 @@
             background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
             font-family: 'Poppins', sans-serif;
             height: 100vh;
-            position: relative;
             color: white;
+            position: relative;
         }
 
         #dragotron,
@@ -23,7 +23,7 @@
             width: 150px;
             height: 150px;
             cursor: pointer;
-            transition: filter 0.5s;
+            transition: transform 0.1s ease-out;
         }
 
         #speech-bubble {
@@ -94,17 +94,64 @@
                 transform: scaleY(0.1);
             }
         }
+
+        #hp-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 300px;
+            height: 20px;
+            background: #444;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #hp-fill {
+            height: 100%;
+            background: green;
+            width: 100%;
+        }
+
+        #level {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+        }
+
+        #score {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            font-size: 1.2rem;
+        }
+
+        #mini-map {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+        }
+
+        #map-dragon,
+        #map-boss {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: white;
+            position: absolute;
+        }
     </style>
 </head>
 
 <body>
 
-    <!-- Musik Latar -->
     <audio id="background-music"
         src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_8e7e1d1f4f.mp3?filename=epic-adventure-113064.mp3"
         autoplay loop></audio>
-
-    <!-- Sound Effect -->
     <audio id="woosh-sound"
         src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_22ffb06a4a.mp3?filename=fast-swoosh-1-6743.mp3"></audio>
     <audio id="hit-sound"
@@ -120,7 +167,7 @@
         <path d="M 100 150 Q 90 170 110 190" stroke="gray" stroke-width="5" fill="none" />
     </svg>
 
-    <!-- Boss Monster -->
+    <!-- Boss -->
     <svg id="boss" viewBox="0 0 200 200" style="display: none;">
         <circle cx="100" cy="100" r="50" fill="darkred" stroke="black" stroke-width="3" />
         <rect x="80" y="70" width="10" height="20" fill="black" />
@@ -128,12 +175,20 @@
         <path d="M 80 130 Q 100 160 120 130" stroke="black" stroke-width="5" fill="none" />
     </svg>
 
+    <div id="hp-bar">
+        <div id="hp-fill"></div>
+    </div>
+    <div id="level">Level: 1</div>
+    <div id="score">Score: 0</div>
+    <div id="mini-map">
+        <div id="map-dragon" style="top: 50%; left: 50%;"></div>
+        <div id="map-boss" style="top: 20%; left: 20%;"></div>
+    </div>
     <div id="fire"></div>
     <div id="speech-bubble">Halo! Aku Dragotron Supreme! 🐲🔥</div>
 
     <script>
         const dragotron = document.getElementById('dragotron');
-        const boss = document.getElementById('boss');
         const body = document.getElementById('body');
         const speech = document.getElementById('speech-bubble');
         const fire = document.getElementById('fire');
@@ -141,107 +196,134 @@
         const hit = document.getElementById('hit-sound');
         const music = document.getElementById('background-music');
 
-        const gitTips = [
-            "git init - Membuat repo Git baru 🚀",
-            "git status - Cek status file 🧐",
-            "git add . - Tambahkan semua perubahan 📂",
-            "git commit -m 'pesan' - Simpan snapshot 💾",
-            "git push origin main - Kirim ke server 🌐",
-            "git pull origin main - Ambil update terbaru 🔄",
-            "git branch - Lihat semua cabang 🌿",
-            "git merge nama_branch - Gabung cabang 🔗"
-        ];
-
         let posX = window.innerWidth / 2;
         let posY = window.innerHeight / 2;
-        let dx = 3;
-        let dy = 3;
+        let targetX = posX;
+        let targetY = posY;
+        let speed = 5;
         let powerCount = 0;
         let bossActive = false;
+        let hp = 100;
+        let score = 0;
+        let level = 1;
 
         function moveDragotron() {
-            posX += dx;
-            posY += dy;
+            const dx = targetX - posX;
+            const dy = targetY - posY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (posX <= 0 || posX >= window.innerWidth - 150) {
-                dx *= -1;
-                woosh.play();
-                powerUp();
+            if (distance > 1) {
+                posX += dx / distance * speed;
+                posY += dy / distance * speed;
+                dragotron.style.left = posX + 'px';
+                dragotron.style.top = posY + 'px';
+                requestAnimationFrame(moveDragotron); // Smooth animation
             }
-            if (posY <= 0 || posY >= window.innerHeight - 150) {
-                dy *= -1;
-                woosh.play();
-                powerUp();
-            }
-
-            dragotron.style.left = posX + 'px';
-            dragotron.style.top = posY + 'px';
         }
 
-        setInterval(moveDragotron, 20);
-
-        function showRandomTip() {
-            const tip = gitTips[Math.floor(Math.random() * gitTips.length)];
-            speech.textContent = tip;
-            speech.style.opacity = 1;
-            speech.style.transform = `translate(${Math.random() * 100}px, ${Math.random() * -50}px)`;
-            setTimeout(() => {
-                speech.style.opacity = 0;
-            }, 4000);
+        function updateMiniMap() {
+            document.getElementById('map-dragon').style.top = `${(posY / window.innerHeight) * 100}%`;
+            document.getElementById('map-dragon').style.left = `${(posX / window.innerWidth) * 100}%`;
         }
 
-        setInterval(showRandomTip, 6000);
-
-        dragotron.addEventListener('click', () => {
-            showRandomTip();
-            shootFire();
+        // Event listener for WASD keys
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'w': // Move Up
+                    targetY -= 5;
+                    break;
+                case 's': // Move Down
+                    targetY += 5;
+                    break;
+                case 'a': // Move Left
+                    targetX -= 5;
+                    break;
+                case 'd': // Move Right
+                    targetX += 5;
+                    break;
+            }
+            moveDragotron(); // Trigger smooth movement
         });
-
-        function shootFire() {
-            fire.style.left = (posX + 60) + 'px';
-            fire.style.top = (posY + 30) + 'px';
-            fire.style.animation = 'fireblast 0.5s forwards';
-            setTimeout(() => {
-                fire.style.animation = '';
-            }, 600);
-        }
 
         function powerUp() {
-            const colors = ['#00f0ff', '#ff00f0', '#00ff90', '#ff9000', '#ff0', '#0ff', '#f0f'];
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            body.setAttribute('fill', randomColor);
-            dragotron.style.filter = `drop-shadow(0 0 20px ${randomColor})`;
-
+            if (powerCount > 0) return;
             powerCount++;
-            if (powerCount % 3 === 0) {
-                evolveDragotron();
-            }
-
-            if (powerCount % 5 === 0 && !bossActive) {
-                summonBoss();
-            }
+            speech.textContent = `Power-up activated! Fire ready!`;
+            speech.style.opacity = 1;
+            setTimeout(() => speech.style.opacity = 0, 2000);
         }
 
-        function evolveDragotron() {
-            dragotron.style.transform = "translate(-50%, -50%) scale(1.2)";
-        }
+        function attackBoss() {
+            if (!bossActive) return;
+            const attack = document.createElement('div');
+            attack.style.left = posX + 70 + 'px';
+            attack.style.top = posY + 50 + 'px';
+            attack.id = 'fire';
+            document.body.appendChild(attack);
 
-        function summonBoss() {
-            boss.style.display = 'block';
-            boss.style.left = Math.random() * (window.innerWidth - 150) + 'px';
-            boss.style.top = Math.random() * (window.innerHeight - 150) + 'px';
-            bossActive = true;
-        }
-
-        boss.addEventListener('click', () => {
-            boss.style.display = 'none';
-            bossActive = false;
             hit.play();
-            alert("Kamu mengalahkan Boss Monster! 🎉🐉");
+            setTimeout(() => attack.remove(), 1000);
+        }
+
+        function bossFight() {
+            if (!bossActive) return;
+            const bossX = parseFloat(boss.style.left);
+            const bossY = parseFloat(boss.style.top);
+            const distance = Math.sqrt(Math.pow(posX - bossX, 2) + Math.pow(posY - bossY, 2));
+
+            if (distance < 100) {
+                boss.style.display = 'none';
+                bossActive = false;
+                score += 50;
+                level++;
+                document.getElementById('score').textContent = 'Score: ' + score;
+                document.getElementById('level').textContent = 'Level: ' + level;
+                setTimeout(() => {
+                    boss.style.display = 'block';
+                    boss.style.top = Math.random() * (window.innerHeight - 150) + 'px';
+                    boss.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+                    bossActive = true;
+                }, 2000);
+            }
+        }
+
+        function updateHP() {
+            const hpFill = document.getElementById('hp-fill');
+            hpFill.style.width = hp + '%';
+            if (hp <= 0) {
+                speech.textContent = 'Game Over!';
+                speech.style.opacity = 1;
+                setTimeout(() => location.reload(), 3000);
+            }
+        }
+
+        function gameLoop() {
+            moveDragotron();
+            bossFight();
+            updateHP();
+            updateMiniMap();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Trigger attack on click
+        dragotron.addEventListener('click', () => {
+            if (powerCount > 0) {
+                attackBoss();
+                powerCount = 0;
+            }
         });
 
+        // Start Boss Battle
+        setInterval(() => {
+            bossActive = true;
+            boss.style.top = Math.random() * (window.innerHeight - 150) + 'px';
+            boss.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+        }, 10000);
+
+        // Start Game
+        gameLoop();
     </script>
 
 </body>
 
-</html>
+</html> 
